@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小环-物块连接系统运动仿真</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            max-width: 1100px;
+            margin: 20px auto;
+            padding: 0 20px;
+            color: #1f2937;
+        }
+        .panel {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 16px 20px;
+            margin-bottom: 20px;
+        }
+        .params {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 12px 20px;
+            margin-bottom: 12px;
+        }
+        .param-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .param-item label {
+            font-size: 14px;
+            color: #475569;
+        }
+        .param-item input {
+            padding: 6px 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btns {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        button {
+            padding: 8px 18px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .btn-primary {
+            background: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover { background: #1d4ed8; }
+        .btn-secondary {
+            background: #64748b;
+            color: white;
+        }
+        .btn-secondary:hover { background: #475569; }
+        canvas {
+            width: 100% !important;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+        }
+        .note {
+            margin-top: 12px;
+            font-size: 13px;
+            color: #64748b;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <h2>小环-物块连接系统运动仿真</h2>
+
+    <div class="panel">
+        <div class="params">
+            <div class="param-item">
+                <label>滑轮到杆水平距离 d (m)</label>
+                <input type="number" id="inputD" value="1.0" step="0.1" min="0.1">
+            </div>
+            <div class="param-item">
+                <label>质量比 k = M/m</label>
+                <input type="number" id="inputK" value="1.0" step="0.1" min="0.1">
+            </div>
+            <div class="param-item">
+                <label>总模拟时间 (s)</label>
+                <input type="number" id="inputTotal" value="10" step="1" min="0.1">
+            </div>
+            <div class="param-item">
+                <label>输出时间间隔 (s)</label>
+                <input type="number" id="inputStep" value="0.1" step="0.01" min="0.001">
+            </div>
+        </div>
+        <div class="btns">
+            <button class="btn-primary" id="calcBtn">开始计算并绘图</button>
+            <button class="btn-secondary" id="exportBtn">导出 CSV 数据</button>
+        </div>
+        <div class="note">
+            物理规律：k=1 时系统最终趋近匀速运动；k&lt;1 时小环最终匀加速下落；k&gt;1 时小环做非线性往复振荡。内部计算步长固定为 0.001s，保证数值精度。
+        </div>
+    </div>
+
+    <canvas id="chart" height="300"></canvas>
+
+    <script>
+        const g = 9.8; // 重力加速度
+        let chart = null;
+        let resultData = null; // 缓存计算结果用于导出
+
+        // 计算小环竖直方向加速度 a(y, v, d, k)
+        function acceleration(y, v, d, k) {
+            const L = Math.sqrt(d * d + y * y);
+            const cosθ = y / L;
+            const sinθ = d / L;
+            const numerator = g * (1 - k * cosθ) - (k * v * v * cosθ * Math.pow(sinθ, 3)) / d;
+            const denominator = 1 + k * cosθ * cosθ;
+            return numerator / denominator;
+        }
+
+        // 二阶四阶龙格-库塔（RK4）主计算函数
+        function calculate(d, k, totalTime, outputStep) {
+            const calcStep = 0.001; // 内部高精度计算步长
+            const tList = [];
+            const yList = [];
+            const vList = [];
+
+            let t = 0;
+            let y = 0;  // 初始位移
+            let v = 0;  // 初始速度
+            let nextOutput = 0;
+
+            // 写入初始点
+            tList.push(t);
+            yList.push(y);
+            vList.push(v);
+            nextOutput += outputStep;
+
+            // RK4 迭代主循环
+            while (t < totalTime - 1e-8) {
+                // 状态向量 [y, v]，导数分别为 v 和 a
+                // k1 斜率
+                const a1 = acceleration(y, v, d, k);
+                const k1_y = v;
+                const k1_v = a1;
+
+                // k2 斜率
+                const y2 = y + 0.5 * calcStep * k1_y;
+                const v2 = v + 0.5 * calcStep * k1_v;
+                const a2 = acceleration(y2, v2, d, k);
+                const k2_y = v2;
+                const k2_v = a2;
+
+                // k3 斜率
+                const y3 = y + 0.5 * calcStep * k2_y;
+                const v3 = v + 0.5 * calcStep * k2_v;
+                const a3 = acceleration(y3, v3, d, k);
+                const k3_y = v3;
+                const k3_v = a3;
+
+                // k4 斜率
+                const y4 = y + calcStep * k3_y;
+                const v4 = v + calcStep * k3_v;
+                const a4 = acceleration(y4, v4, d, k);
+                const k4_y = v4;
+                const k4_v = a4;
+
+                // 更新状态
+                y += (calcStep / 6) * (k1_y + 2*k2_y + 2*k3_y + k4_y);
+                v += (calcStep / 6) * (k1_v + 2*k2_v + 2*k3_v + k4_v);
+                t += calcStep;
+
+                // 按设定间隔采样输出
+                if (t >= nextOutput - 1e-8) {
+                    tList.push(Number(nextOutput.toFixed(3)));
+                    yList.push(Number(y.toFixed(4)));
+                    vList.push(Number(v.toFixed(4)));
+                    nextOutput += outputStep;
+                }
+            }
+
+            return { tList, yList, vList };
+        }
+
+        // 绘制双Y轴图表（左轴位移，右轴速度）
+        function drawChart(data) {
+            const ctx = document.getElementById('chart').getContext('2d');
+            
+            // 销毁旧图表避免重叠
+            if (chart) chart.destroy();
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.tList,
+                    datasets: [
+                        {
+                            label: '下落位移 y (m)',
+                            data: data.yList,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.08)',
+                            borderWidth: 2,
+                            yAxisID: 'y',
+                            tension: 0.1,
+                            pointRadius: 0,
+                            pointHoverRadius: 3
+                        },
+                        {
+                            label: '小环速度 v (m/s)',
+                            data: data.vList,
+                            borderColor: '#16a34a',
+                            borderWidth: 2,
+                            yAxisID: 'y1',
+                            tension: 0.1,
+                            pointRadius: 0,
+                            pointHoverRadius: 3
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: '时间 t (s)' },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            title: { display: true, text: '下落位移 y (m)' },
+                            grid: { color: '#f1f5f9' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            title: { display: true, text: '小环速度 v (m/s)' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    },
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)' }
+                    }
+                }
+            });
+        }
+
+        // 导出 CSV 数据文件
+        function exportCSV(data) {
+            let csvContent = 't(s),y(m),v(m/s)\n';
+            for (let i = 0; i < data.tList.length; i++) {
+                csvContent += `${data.tList[i]},${data.yList[i]},${data.vList[i]}\n`;
+            }
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `motion_k${document.getElementById('inputK').value}_t${document.getElementById('inputTotal').value}.csv`;
+            link.click();
+        }
+
+        // 按钮事件绑定
+        document.getElementById('calcBtn').addEventListener('click', () => {
+            const d = parseFloat(document.getElementById('inputD').value);
+            const k = parseFloat(document.getElementById('inputK').value);
+            const total = parseFloat(document.getElementById('inputTotal').value);
+            const step = parseFloat(document.getElementById('inputStep').value);
+
+            // 输入合法性校验
+            if (isNaN(d) || isNaN(k) || isNaN(total) || isNaN(step) 
+                || d <= 0 || k <= 0 || total <= 0 || step <= 0) {
+                alert('请输入有效的正数参数');
+                return;
+            }
+            if (step > total) {
+                alert('输出间隔不能大于总模拟时间');
+                return;
+            }
+
+            resultData = calculate(d, k, total, step);
+            drawChart(resultData);
+        });
+
+        document.getElementById('exportBtn').addEventListener('click', () => {
+            if (!resultData) {
+                alert('请先点击「开始计算并绘图」生成数据');
+                return;
+            }
+            exportCSV(resultData);
+        });
+
+        // 页面加载后自动执行一次默认计算
+        window.addEventListener('load', () => {
+            document.getElementById('calcBtn').click();
+        });
+    </script>
+</body>
+</html>
