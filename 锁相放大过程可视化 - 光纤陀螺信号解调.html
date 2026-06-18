@@ -1,20 +1,22 @@
-
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>锁相放大过程可视化 - 光纤陀螺信号解调</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">
+    </script>
     <style>
         .canvas-container {
-            background: #0f172a;
-            border-radius: 8px;
-            padding: 12px;
+            background: #f8fafc;
+            border-radius: 10px;
+            padding: 14px;
+            border: 1px solid #e2e8f0;
         }
         canvas {
             width: 100%;
             display: block;
+            border-radius: 4px;
         }
         .slider-group input[type="range"] {
             width: 100%;
@@ -33,38 +35,52 @@
             top: 50%;
             transform: translateY(-50%) rotate(-90deg);
             font-size: 10px;
-            color: #64748b;
+            color: #94a3b8;
             pointer-events: none;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.04);
+            border: 1px solid #f1f5f9;
+        }
+        .stat-badge {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 8px 12px;
+            text-align: center;
         }
     </style>
 </head>
-<body class="bg-slate-900 text-slate-100 min-h-screen">
+<body class="bg-gray-50 text-gray-800 min-h-screen">
     <div class="max-w-6xl mx-auto px-4 py-8">
         <!-- 标题 -->
         <header class="text-center mb-8">
-            <h1 class="text-3xl font-bold text-blue-400 mb-2">从光强信号到相位解调</h1>
-            <p class="text-slate-400">光纤陀螺相位调制与锁相放大过程可视化</p>
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">从光强信号到相位解调</h1>
+            <p class="text-gray-500">光纤陀螺相位调制与锁相放大过程可视化</p>
         </header>
 
         <!-- 全局控制面板 -->
-        <div class="bg-slate-800 rounded-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4 text-blue-300">信号参数控制</h2>
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-blue-600">信号参数控制</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 slider-group">
                 <div>
-                    <label class="block text-sm text-slate-300 mb-2">
-                        Sagnac 相位差 Δφ<sub>S</sub> = <span id="phiS-value">0.0</span> rad
+                    <label class="block text-sm text-gray-600 mb-2">
+                        Sagnac 相位差 Δφ<sub>S</sub> = <span id="phiS-value" class="font-mono font-semibold text-gray-800">0.0</span> rad
                     </label>
                     <input type="range" id="phiS" min="-1.5" max="1.5" step="0.01" value="0.3">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-300 mb-2">
-                        调制深度 φ<sub>a</sub> = <span id="phiA-value">1.08</span> rad
+                    <label class="block text-sm text-gray-600 mb-2">
+                        调制深度 φ<sub>a</sub> = <span id="phiA-value" class="font-mono font-semibold text-gray-800">1.08</span> rad
                     </label>
                     <input type="range" id="phiA" min="0" max="3.5" step="0.01" value="1.08">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-300 mb-2">
-                        参考相位 θ = <span id="refPhase-value">0.00</span> rad
+                    <label class="block text-sm text-gray-600 mb-2">
+                        参考相位 θ = <span id="refPhase-value" class="font-mono font-semibold text-gray-800">0.00</span> rad
                     </label>
                     <input type="range" id="refPhase" min="0" max="6.28" step="0.01" value="0">
                 </div>
@@ -72,38 +88,38 @@
         </div>
 
         <!-- 视图控制 -->
-        <div class="bg-slate-800 rounded-lg p-6 mb-6">
-            <h2 class="text-xl font-semibold mb-4 text-green-300">视图控制</h2>
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-emerald-600">视图控制</h2>
             <div class="grid grid-cols-1 md:grid-cols-3 gap-6 slider-group">
                 <div>
-                    <label class="block text-sm text-slate-300 mb-2">
-                        X轴显示周期数：<span id="xCycles-value">4</span> 个周期
+                    <label class="block text-sm text-gray-600 mb-2">
+                        X轴显示周期数：<span id="xCycles-value" class="font-mono font-semibold text-gray-800">4</span> 个周期
                     </label>
                     <input type="range" id="xCycles" min="1" max="10" step="0.5" value="4">
                 </div>
                 <div>
-                    <label class="block text-sm text-slate-300 mb-2">
-                        Y轴缩放：<span id="yScale-value">1.0</span>x
+                    <label class="block text-sm text-gray-600 mb-2">
+                        Y轴缩放：<span id="yScale-value" class="font-mono font-semibold text-gray-800">1.0</span>x
                     </label>
                     <input type="range" id="yScale" min="0.2" max="3" step="0.1" value="1.0">
                 </div>
                 <div class="flex items-center">
                     <label class="flex items-center cursor-pointer">
                         <input type="checkbox" id="autoY" checked class="mr-2 w-4 h-4 accent-blue-500">
-                        <span class="text-sm text-slate-300">Y轴自动适配范围</span>
+                        <span class="text-sm text-gray-600">Y轴自动适配范围</span>
                     </label>
                 </div>
             </div>
-            <p class="text-xs text-slate-500 mt-3">
+            <p class="text-xs text-gray-400 mt-3">
                 💡 关闭「Y轴自动适配」后，可通过缩放滑块手动调节；开启时系统自动计算信号上下限并留 10% 边距。
             </p>
         </div>
 
         <!-- 第一级：原始光强信号 -->
         <div class="canvas-container mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-blue-300 font-medium">① 探测器输出光强信号 I(t)</h3>
-                <span class="text-xs text-slate-500">I(t) = 2I₀[1 + cos(Δφ<sub>S</sub> + φ<sub>a</sub>cos(2πf<sub>m</sub>t))]</span>
+            <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                <h3 class="text-blue-600 font-semibold">① 探测器输出光强信号 I(t)</h3>
+                <span class="text-xs text-gray-400 font-mono">I(t) = 2I₀[1 + cos(Δφ<sub>S</sub> + φ<sub>a</sub>cos(2πf<sub>m</sub>t))]</span>
             </div>
             <div class="chart-area">
                 <canvas id="canvas1" height="180"></canvas>
@@ -112,111 +128,117 @@
 
         <!-- 第二级：谐波分解 -->
         <div class="canvas-container mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-green-300 font-medium">② 谐波分解（贝塞尔函数展开）</h3>
-                <span class="text-xs text-slate-500">直流 + 一次谐波 + 二次谐波 + 三次谐波</span>
+            <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                <h3 class="text-emerald-600 font-semibold">② 谐波分解（贝塞尔函数展开）</h3>
+                <span class="text-xs text-gray-400 font-mono">直流 + 一次谐波 + 二次谐波 + 三次谐波</span>
             </div>
             <div class="chart-area">
                 <canvas id="canvas2" height="220"></canvas>
             </div>
-            <div class="grid grid-cols-4 gap-2 mt-3 text-xs">
-                <div class="text-center">
-                    <span class="text-slate-400">直流分量</span>
-                    <div id="dc-amp" class="text-white font-mono">0.00</div>
+            <div class="grid grid-cols-4 gap-3 mt-4">
+                <div class="stat-badge">
+                    <span class="text-gray-400 text-xs">直流分量</span>
+                    <div id="dc-amp" class="text-gray-800 font-mono font-bold text-sm">0.00</div>
                 </div>
-                <div class="text-center">
-                    <span class="text-yellow-400">一次谐波 (f<sub>m</sub>)</span>
-                    <div id="h1-amp" class="text-yellow-400 font-mono">0.00</div>
+                <div class="stat-badge">
+                    <span class="text-amber-600 text-xs font-medium">一次谐波 (f<sub>m</sub>)</span>
+                    <div id="h1-amp" class="text-amber-600 font-mono font-bold text-sm">0.00</div>
                 </div>
-                <div class="text-center">
-                    <span class="text-pink-400">二次谐波 (2f<sub>m</sub>)</span>
-                    <div id="h2-amp" class="text-pink-400 font-mono">0.00</div>
+                <div class="stat-badge">
+                    <span class="text-pink-600 text-xs font-medium">二次谐波 (2f<sub>m</sub>)</span>
+                    <div id="h2-amp" class="text-pink-600 font-mono font-bold text-sm">0.00</div>
                 </div>
-                <div class="text-center">
-                    <span class="text-cyan-400">三次谐波 (3f<sub>m</sub>)</span>
-                    <div id="h3-amp" class="text-cyan-400 font-mono">0.00</div>
+                <div class="stat-badge">
+                    <span class="text-cyan-600 text-xs font-medium">三次谐波 (3f<sub>m</sub>)</span>
+                    <div id="h3-amp" class="text-cyan-600 font-mono font-bold text-sm">0.00</div>
                 </div>
             </div>
         </div>
 
         <!-- 第三级：相乘混频 -->
         <div class="canvas-container mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-purple-300 font-medium">③ 锁相相乘：信号 × 参考信号</h3>
-                <span class="text-xs text-slate-500">U<sub>mix</sub>(t) = U(t) · U<sub>ref</sub>(t)</span>
+            <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                <h3 class="text-purple-600 font-semibold">③ 锁相相乘：信号 × 参考信号</h3>
+                <span class="text-xs text-gray-400 font-mono">U<sub>mix</sub>(t) = U(t) · U<sub>ref</sub>(t)</span>
             </div>
             <div class="chart-area">
                 <canvas id="canvas3" height="180"></canvas>
             </div>
-            <div class="text-xs text-slate-500 mt-2">
-                相乘后产生两个频率分量：差频（直流）+ 和频（2f<sub>m</sub>）。其中直流分量携带了 Sagnac 相位信息。
+            <div class="text-xs text-gray-400 mt-3 leading-relaxed">
+                相乘后产生两个频率分量：<span class="text-gray-600 font-medium">差频（直流）+ 和频（2f<sub>m</sub>）</span>。其中直流分量携带了 Sagnac 相位信息。
             </div>
         </div>
 
         <!-- 第四级：低通滤波输出 -->
         <div class="canvas-container mb-6">
-            <div class="flex justify-between items-center mb-2">
-                <h3 class="text-orange-300 font-medium">④ 低通滤波输出（锁相结果）</h3>
-                <span class="text-xs text-slate-500">U<sub>out</sub> ∝ -J₁(φ<sub>a</sub>) · sin(Δφ<sub>S</sub>) · cos(θ<sub>s</sub>-θ)</span>
+            <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                <h3 class="text-orange-500 font-semibold">④ 低通滤波输出（锁相结果）</h3>
+                <span class="text-xs text-gray-400 font-mono">U<sub>out</sub> ∝ -J₁(φ<sub>a</sub>) · sin(Δφ<sub>S</sub>) · cos(θ<sub>s</sub>-θ)</span>
             </div>
             <div class="chart-area">
                 <canvas id="canvas4" height="180"></canvas>
             </div>
-            <div class="mt-3 p-3 bg-slate-700/50 rounded text-sm">
-                <div class="flex justify-between">
-                    <span class="text-slate-400">锁相输出直流值：</span>
-                    <span id="output-value" class="text-orange-400 font-mono font-bold">0.000</span>
+            <div class="mt-4 p-4 bg-gray-50 rounded-lg border border-gray-100 text-sm">
+                <div class="flex justify-between items-center py-1">
+                    <span class="text-gray-500">锁相输出直流值：</span>
+                    <span id="output-value" class="text-orange-500 font-mono font-bold text-lg">0.000</span>
                 </div>
-                <div class="flex justify-between mt-1">
-                    <span class="text-slate-400">sin(Δφ<sub>S</sub>)：</span>
-                    <span id="sin-phiS" class="text-orange-400 font-mono">0.000</span>
+                <div class="flex justify-between items-center py-1 mt-1">
+                    <span class="text-gray-500">sin(Δφ<sub>S</sub>)：</span>
+                    <span id="sin-phiS" class="text-orange-500 font-mono">0.000</span>
                 </div>
-                <div class="flex justify-between mt-1">
-                    <span class="text-slate-400">J₁(φ<sub>a</sub>)：</span>
-                    <span id="j1-value" class="text-orange-400 font-mono">0.000</span>
+                <div class="flex justify-between items-center py-1 mt-1">
+                    <span class="text-gray-500">J₁(φ<sub>a</sub>)：</span>
+                    <span id="j1-value" class="text-orange-500 font-mono">0.000</span>
                 </div>
             </div>
         </div>
 
         <!-- 原理说明 -->
-        <div class="bg-slate-800 rounded-lg p-6 mt-8">
-            <h2 class="text-xl font-semibold mb-4 text-blue-300">核心原理小结</h2>
-            <div class="space-y-3 text-slate-300 text-sm">
-                <p><strong class="text-white">1. 为什么要调制？</strong> 直接测光强无法区分旋转方向，且零点附近灵敏度为零。相位调制将待测相位差"搬移"到高频载波上。</p>
-                <p><strong class="text-white">2. 一次谐波的关键作用：</strong> 基频分量的幅度正比于 sin(Δφ<sub>S</sub>)，在 Δφ<sub>S</sub>≈0 时线性度最好，且符号反映旋转方向。</p>
-                <p><strong class="text-white">3. 锁相放大的本质：</strong> 通过与参考信号相乘再低通滤波，只提取与参考同频同相的分量，滤除所有其他频率的噪声，实现极高的信噪比。</p>
-                <p><strong class="text-white">4. 闭环工作：</strong> 实际陀螺中，该输出作为误差信号反馈给相位调制器，使总相位差保持为零，反馈量即为转速输出。</p>
+        <div class="card mt-8">
+            <h2 class="text-xl font-semibold mb-4 text-blue-600">核心原理小结</h2>
+            <div class="space-y-3 text-gray-600 text-sm leading-relaxed">
+                <p><strong class="text-gray-900">1. 为什么要调制？</strong> 直接测光强无法区分旋转方向，且零点附近灵敏度为零。相位调制将待测相位差"搬移"到高频载波上。</p>
+                <p><strong class="text-gray-900">2. 一次谐波的关键作用：</strong> 基频分量的幅度正比于 sin(Δφ<sub>S</sub>)，在 Δφ<sub>S</sub>≈0 时线性度最好，且符号反映旋转方向。</p>
+                <p><strong class="text-gray-900">3. 锁相放大的本质：</strong> 通过与参考信号相乘再低通滤波，只提取与参考同频同相的分量，滤除所有其他频率的噪声，实现极高的信噪比。</p>
+                <p><strong class="text-gray-900">4. 闭环工作：</strong> 实际陀螺中，该输出作为误差信号反馈给相位调制器，使总相位差保持为零，反馈量即为转速输出。</p>
             </div>
         </div>
     </div>
 
     <script>
         // ========== 数学工具函数 ==========
-        
+
         // 第一类贝塞尔函数 J_n(x)
         function besselJ(n, x) {
             if (Math.abs(x) < 1e-10) return n === 0 ? 1 : 0;
-            
+
             if (n === 0) {
                 const ax = Math.abs(x);
                 if (ax < 3.75) {
                     const y = (x / 3.75) ** 2;
-                    return 1.0 + y * (-2.2499997 + y * (1.2656208 + y * (-0.3163866 + y * (0.0444479 + y * (-0.0039444 + y * 0.0002100)))));
+                    return 1.0 + y * (-2.2499997 + y * (1.2656208 + y * (-0.3163866 + y * (0.0444479 + y * (-0.0039444 +
+                        y * 0.0002100)))));
                 } else {
                     const y = 3.75 / ax;
-                    const ans = 0.79788456 + y * (0.000000156 + y * (-0.00552740 + y * (-0.00009512 + y * (0.00137237 + y * (-0.00072805 + y * 0.00014476)))));
-                    const theta = ax - 0.78539816 + y * (-0.04166397 + y * (-0.00003954 + y * (0.00262573 + y * (-0.00054125 + y * (-0.00029333 + y * 0.00013558)))));
+                    const ans = 0.79788456 + y * (0.000000156 + y * (-0.00552740 + y * (-0.00009512 + y * (0.00137237 + y * (
+                        -0.00072805 + y * 0.00014476)))));
+                    const theta = ax - 0.78539816 + y * (-0.04166397 + y * (-0.00003954 + y * (0.00262573 + y * (-0.00054125 +
+                        y * (-0.00029333 + y * 0.00013558)))));
                     return ans * Math.cos(theta);
                 }
             } else if (n === 1) {
                 const ax = Math.abs(x);
                 if (ax < 3.75) {
                     const y = (x / 3.75) ** 2;
-                    return x * (0.5 + y * (-0.56249985 + y * (0.21093573 + y * (-0.03954289 + y * (0.00443319 + y * (-0.00031761 + y * 0.00001109))))));
+                    return x * (0.5 + y * (-0.56249985 + y * (0.21093573 + y * (-0.03954289 + y * (0.00443319 + y * (-0.00031761 +
+                        y * 0.00001109))))));
                 } else {
                     const y = 3.75 / ax;
-                    const ans = 0.79788456 + y * (0.00000165 + y * (0.01659667 + y * (0.00017105 + y * (-0.00249511 + y * (0.00113653 + y * (-0.00020033))))));
-                    const theta = ax - 2.35619449 + y * (0.12499612 + y * (0.00005650 + y * (-0.00637879 + y * (0.00074348 + y * (0.00079824 + y * (-0.00034559))))));
+                    const ans = 0.79788456 + y * (0.00000165 + y * (0.01659667 + y * (0.00017105 + y * (-0.00249511 + y * (
+                        0.00113653 + y * (-0.00020033))))));
+                    const theta = ax - 2.35619449 + y * (0.12499612 + y * (0.00005650 + y * (-0.00637879 + y * (0.00074348 + y *
+                        (0.00079824 + y * (-0.00034559))))));
                     return ans * Math.cos(theta) * Math.sign(x);
                 }
             } else if (n === 2) {
@@ -229,7 +251,8 @@
 
         // 计算一组采样数据的极值
         function computeExtremes(func, tStart, tEnd, points) {
-            let min = Infinity, max = -Infinity;
+            let min = Infinity,
+                max = -Infinity;
             const dt = (tEnd - tStart) / points;
             for (let i = 0; i <= points; i++) {
                 const t = tStart + i * dt;
@@ -254,7 +277,7 @@
         };
 
         // ========== 信号生成函数 ==========
-        
+
         function modulatedIntensity(t) {
             const phi = params.phiS + params.phiA * Math.cos(2 * Math.PI * params.fm * t);
             return 2 * params.I0 * (1 + Math.cos(phi));
@@ -264,7 +287,7 @@
             const I0 = params.I0;
             const phiA = params.phiA;
             const phiS = params.phiS;
-            
+
             if (n === 0) {
                 return 2 * I0 * (1 + besselJ(0, phiA) * Math.cos(phiS));
             } else if (n === 1) {
@@ -293,13 +316,13 @@
             return outputDC + 0.05 * Math.cos(4 * Math.PI * params.fm * t);
         }
 
-        // ========== 增强绘图函数（带自动缩放和刻度） ==========
-        
+        // ========== 增强绘图函数（浅色背景适配） ==========
+
         function drawChart(canvas, signalFunc, color, label, customYRange = null) {
             const ctx = canvas.getContext('2d');
             const w = canvas.width;
             const h = canvas.height;
-            
+
             // 边距设置
             const padLeft = 50;
             const padRight = 10;
@@ -307,11 +330,11 @@
             const padBottom = 25;
             const plotW = w - padLeft - padRight;
             const plotH = h - padTop - padBottom;
-            
+
             // 时间范围
             const tStart = 0;
             const tEnd = params.xCycles;
-            
+
             // 计算Y轴范围
             let yMin, yMax;
             if (customYRange) {
@@ -324,45 +347,44 @@
                 yMin = extremes.min - margin;
                 yMax = extremes.max + margin;
             } else {
-                // 手动模式：以信号中心为基准，按缩放比例调整
                 const extremes = computeExtremes(signalFunc, tStart, tEnd, params.points);
                 const center = (extremes.max + extremes.min) / 2;
                 const halfRange = (extremes.max - extremes.min) / 2 / params.yScale;
                 yMin = center - halfRange * 1.2;
                 yMax = center + halfRange * 1.2;
             }
-            
+
             // 坐标映射函数
             const xToPixel = (t) => padLeft + ((t - tStart) / (tEnd - tStart)) * plotW;
             const yToPixel = (val) => padTop + (1 - (val - yMin) / (yMax - yMin)) * plotH;
-            
-            // 清空画布
-            ctx.fillStyle = '#0f172a';
+
+            // 清空画布（浅色背景）
+            ctx.fillStyle = '#fafcfd';
             ctx.fillRect(0, 0, w, h);
-            
+
             // 绘制网格和Y轴刻度
-            ctx.strokeStyle = '#1e293b';
+            ctx.strokeStyle = '#e5e7eb';
             ctx.lineWidth = 1;
-            ctx.fillStyle = '#64748b';
+            ctx.fillStyle = '#6b7280';
             ctx.font = '10px monospace';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            
+
             // 5条水平网格线 + 刻度
             const yTicks = 5;
             for (let i = 0; i <= yTicks; i++) {
                 const val = yMin + (yMax - yMin) * i / yTicks;
                 const y = yToPixel(val);
-                
+
                 ctx.beginPath();
                 ctx.moveTo(padLeft, y);
                 ctx.lineTo(w - padRight, y);
                 ctx.stroke();
-                
+
                 // 刻度数值
                 ctx.fillText(val.toFixed(2), padLeft - 5, y);
             }
-            
+
             // X轴刻度
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
@@ -370,38 +392,38 @@
             for (let i = 0; i <= xTicks; i++) {
                 const t = tStart + (tEnd - tStart) * i / xTicks;
                 const x = xToPixel(t);
-                
+
                 ctx.beginPath();
                 ctx.moveTo(x, padTop);
                 ctx.lineTo(x, h - padBottom);
                 ctx.stroke();
-                
+
                 ctx.fillText(t.toFixed(1), x, h - padBottom + 5);
             }
-            
+
             // 零轴线（如果在范围内）
             if (yMin <= 0 && yMax >= 0) {
                 const yZero = yToPixel(0);
-                ctx.strokeStyle = '#475569';
+                ctx.strokeStyle = '#d1d5db';
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(padLeft, yZero);
                 ctx.lineTo(w - padRight, yZero);
                 ctx.stroke();
             }
-            
+
             // 绘制信号波形
             ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.beginPath();
-            
+
             const dt = (tEnd - tStart) / params.points;
             for (let i = 0; i <= params.points; i++) {
                 const t = tStart + i * dt;
                 const val = signalFunc(t);
                 const x = xToPixel(t);
                 const y = yToPixel(val);
-                
+
                 if (i === 0) {
                     ctx.moveTo(x, y);
                 } else {
@@ -409,7 +431,7 @@
                 }
             }
             ctx.stroke();
-            
+
             // 标签
             if (label) {
                 ctx.fillStyle = color;
@@ -418,9 +440,9 @@
                 ctx.textBaseline = 'top';
                 ctx.fillText(label, padLeft + 5, padTop + 5);
             }
-            
+
             // 坐标轴标签
-            ctx.fillStyle = '#64748b';
+            ctx.fillStyle = '#6b7280';
             ctx.font = '10px sans-serif';
             ctx.textAlign = 'center';
             ctx.fillText('时间 t (周期数)', w / 2, h - 5);
@@ -431,25 +453,26 @@
             const ctx = canvas.getContext('2d');
             const w = canvas.width;
             const h = canvas.height;
-            
+
             const padLeft = 50;
             const padRight = 10;
             const padTop = 25;
             const padBottom = 25;
             const plotW = w - padLeft - padRight;
             const plotH = h - padTop - padBottom;
-            
+
             const tStart = 0;
             const tEnd = params.xCycles;
-            
+
             // 计算所有波形的整体极值
-            let allMin = Infinity, allMax = -Infinity;
+            let allMin = Infinity,
+                allMax = -Infinity;
             waveforms.forEach(wf => {
                 const ex = computeExtremes(wf.func, tStart, tEnd, params.points);
                 if (ex.min < allMin) allMin = ex.min;
                 if (ex.max > allMax) allMax = ex.max;
             });
-            
+
             let yMin, yMax;
             if (params.autoY) {
                 const range = allMax - allMin || 1;
@@ -462,22 +485,22 @@
                 yMin = center - halfRange * 1.2;
                 yMax = center + halfRange * 1.2;
             }
-            
+
             const xToPixel = (t) => padLeft + ((t - tStart) / (tEnd - tStart)) * plotW;
             const yToPixel = (val) => padTop + (1 - (val - yMin) / (yMax - yMin)) * plotH;
-            
-            // 清空
-            ctx.fillStyle = '#0f172a';
+
+            // 清空（浅色背景）
+            ctx.fillStyle = '#fafcfd';
             ctx.fillRect(0, 0, w, h);
-            
+
             // 网格
-            ctx.strokeStyle = '#1e293b';
+            ctx.strokeStyle = '#e5e7eb';
             ctx.lineWidth = 1;
-            ctx.fillStyle = '#64748b';
+            ctx.fillStyle = '#6b7280';
             ctx.font = '10px monospace';
             ctx.textAlign = 'right';
             ctx.textBaseline = 'middle';
-            
+
             for (let i = 0; i <= 5; i++) {
                 const val = yMin + (yMax - yMin) * i / 5;
                 const y = yToPixel(val);
@@ -487,7 +510,7 @@
                 ctx.stroke();
                 ctx.fillText(val.toFixed(2), padLeft - 5, y);
             }
-            
+
             ctx.textAlign = 'center';
             ctx.textBaseline = 'top';
             const xTicks = Math.min(8, params.xCycles);
@@ -500,36 +523,36 @@
                 ctx.stroke();
                 ctx.fillText(t.toFixed(1), x, h - padBottom + 5);
             }
-            
+
             // 零轴线
             if (yMin <= 0 && yMax >= 0) {
-                ctx.strokeStyle = '#475569';
+                ctx.strokeStyle = '#d1d5db';
                 ctx.lineWidth = 1.5;
                 ctx.beginPath();
                 ctx.moveTo(padLeft, yToPixel(0));
                 ctx.lineTo(w - padRight, yToPixel(0));
                 ctx.stroke();
             }
-            
+
             // 绘制各波形
             waveforms.forEach(wf => {
                 ctx.strokeStyle = wf.color;
                 ctx.lineWidth = wf.lineWidth || 1.5;
                 ctx.beginPath();
-                
+
                 const dt = (tEnd - tStart) / params.points;
                 for (let i = 0; i <= params.points; i++) {
                     const t = tStart + i * dt;
                     const val = wf.func(t);
                     const x = xToPixel(t);
                     const y = yToPixel(val);
-                    
+
                     if (i === 0) ctx.moveTo(x, y);
                     else ctx.lineTo(x, y);
                 }
                 ctx.stroke();
             });
-            
+
             // 图例
             let legendX = padLeft + 5;
             ctx.font = '11px monospace';
@@ -540,6 +563,12 @@
                 ctx.fillText(wf.label, legendX + 18, padTop + 2);
                 legendX += ctx.measureText(wf.label).width + 30;
             });
+
+            // 坐标轴标签
+            ctx.fillStyle = '#6b7280';
+            ctx.font = '10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('时间 t (周期数)', w / 2, h - 5);
         }
 
         // ========== 更新所有画布 ==========
@@ -550,56 +579,56 @@
             document.getElementById('refPhase-value').textContent = params.refPhase.toFixed(2);
             document.getElementById('xCycles-value').textContent = params.xCycles.toFixed(1);
             document.getElementById('yScale-value').textContent = params.yScale.toFixed(1);
-            
-            // 画布1
+
+            // 画布1 - 原始光强信号
             drawChart(
                 document.getElementById('canvas1'),
                 modulatedIntensity,
-                '#60a5fa',
+                '#3b82f6',
                 'I(t) 光强信号'
             );
-            
+
             // 画布2 - 谐波分解
             const dcVal = harmonicComponent(0, 0);
             const waveforms = [
-                { func: t => modulatedIntensity(t) - dcVal, color: '#ffffff', label: '原始(去直流)', lineWidth: 2 },
-                { func: t => harmonicComponent(1, t), color: '#facc15', label: '一次谐波' },
-                { func: t => harmonicComponent(2, t), color: '#f472b6', label: '二次谐波' },
-                { func: t => harmonicComponent(3, t), color: '#22d3ee', label: '三次谐波' }
+                { func: t => modulatedIntensity(t) - dcVal, color: '#475569', label: '原始(去直流)', lineWidth: 2 },
+                { func: t => harmonicComponent(1, t), color: '#d97706', label: '一次谐波' },
+                { func: t => harmonicComponent(2, t), color: '#db2777', label: '二次谐波' },
+                { func: t => harmonicComponent(3, t), color: '#0891b2', label: '三次谐波' }
             ];
             drawMultiChart(document.getElementById('canvas2'), waveforms);
-            
+
             // 更新谐波数值
             const h1Amp = Math.abs(4 * params.I0 * besselJ(1, params.phiA) * Math.sin(params.phiS));
             const h2Amp = Math.abs(4 * params.I0 * besselJ(2, params.phiA) * Math.cos(params.phiS));
             const h3Amp = Math.abs(4 * params.I0 * besselJ(3, params.phiA) * Math.sin(params.phiS));
-            
+
             document.getElementById('dc-amp').textContent = dcVal.toFixed(2);
             document.getElementById('h1-amp').textContent = h1Amp.toFixed(3);
             document.getElementById('h2-amp').textContent = h2Amp.toFixed(3);
             document.getElementById('h3-amp').textContent = h3Amp.toFixed(3);
-            
-            // 画布3
+
+            // 画布3 - 混频信号
             drawChart(
                 document.getElementById('canvas3'),
                 mixedSignal,
-                '#a855f7',
+                '#7c3aed',
                 '混频信号 U_mix(t)'
             );
-            
-            // 画布4
+
+            // 画布4 - 滤波输出
             drawChart(
                 document.getElementById('canvas4'),
                 filteredOutput,
-                '#fb923c',
+                '#f97316',
                 '滤波输出'
             );
-            
+
             // 输出数值
             const j1 = besselJ(1, params.phiA);
             const sinPhiS = Math.sin(params.phiS);
             const outputDC = -2 * params.I0 * j1 * sinPhiS * Math.cos(-params.refPhase);
-            
+
             document.getElementById('output-value').textContent = outputDC.toFixed(4);
             document.getElementById('sin-phiS').textContent = sinPhiS.toFixed(4);
             document.getElementById('j1-value').textContent = j1.toFixed(4);
@@ -610,27 +639,27 @@
             params.phiS = parseFloat(e.target.value);
             updateAll();
         });
-        
+
         document.getElementById('phiA').addEventListener('input', e => {
             params.phiA = parseFloat(e.target.value);
             updateAll();
         });
-        
+
         document.getElementById('refPhase').addEventListener('input', e => {
             params.refPhase = parseFloat(e.target.value);
             updateAll();
         });
-        
+
         document.getElementById('xCycles').addEventListener('input', e => {
             params.xCycles = parseFloat(e.target.value);
             updateAll();
         });
-        
+
         document.getElementById('yScale').addEventListener('input', e => {
             params.yScale = parseFloat(e.target.value);
             updateAll();
         });
-        
+
         document.getElementById('autoY').addEventListener('change', e => {
             params.autoY = e.target.checked;
             document.getElementById('yScale').disabled = params.autoY;
