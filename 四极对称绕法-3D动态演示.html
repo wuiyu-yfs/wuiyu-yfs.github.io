@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>四极对称绕法 · 3D动态演示</title>
+    <style>
+        :root {
+            --bg: #1a1a1e;
+            --panel-bg: #252528;
+            --text: #e0e0e0;
+            --btn-bg: #333538;
+            --btn-hover: #44464a;
+            --border: #3a3a3f;
+            --radius: 12px;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            background: var(--bg);
+            font-family: 'Inter', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            color: var(--text);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+        }
+        #canvasContainer {
+            flex: 1;
+            position: relative;
+            cursor: grab;
+        }
+        #canvasContainer:active {
+            cursor: grabbing;
+        }
+        .overlay-top {
+            position: absolute;
+            top: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .overlay-top>* {
+            pointer-events: auto;
+        }
+        .badge {
+            padding: 6px 16px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            background: rgba(0, 0, 0, 0.75);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            color: #fff;
+            white-space: nowrap;
+        }
+        .badge.phase {
+            background: rgba(231, 76, 60, 0.75);
+        }
+        .panel {
+            position: absolute;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            background: var(--panel-bg);
+            border-radius: var(--radius);
+            padding: 12px 18px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            max-width: 95vw;
+        }
+        .btn {
+            padding: 8px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--btn-bg);
+            color: #ddd;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: inherit;
+            white-space: nowrap;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .btn:hover {
+            background: var(--btn-hover);
+            border-color: #555;
+            color: #fff;
+        }
+        .btn.primary {
+            background: #e74c3c;
+            border-color: #e74c3c;
+            color: #fff;
+        }
+        .btn.active-loop {
+            background: #f39c12;
+            border-color: #f39c12;
+            color: #fff;
+        }
+        .legend-mini {
+            position: absolute;
+            top: 90px;
+            right: 12px;
+            z-index: 10;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            background: rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(8px);
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.72rem;
+            border: 1px solid rgba(255, 255, 255, 0.18);
+            pointer-events: none;
+        }
+        .legend-mini .item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #ccc;
+        }
+        .legend-mini .swatch {
+            width: 12px;
+            height: 12px;
+            border-radius: 3px;
+            flex-shrink: 0;
+        }
+        .info-tip {
+            position: absolute;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 10;
+            font-size: 0.7rem;
+            color: #888;
+            pointer-events: none;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div id="canvasContainer">
+        <div class="overlay-top">
+            <span class="badge phase" id="phaseLabel">🔄 就绪</span>
+            <span class="badge" id="statusLabel">骨架旋转 · 导嘴A(+z) 导嘴B(−z) 同步铺设双线</span>
+        </div>
+        <div class="legend-mini">
+            <div class="item"><span class="swatch" style="background:#4A90D9;"></span> L1层</div>
+            <div class="item"><span class="swatch" style="background:#5CB85C;"></span> L2层</div>
+            <div class="item"><span class="swatch" style="background:#F0AD4E;"></span> L3层</div>
+            <div class="item"><span class="swatch" style="background:#D9534F;"></span> L4层</div>
+            <div class="item"><span class="swatch" style="background:#f1c40f;border-radius:50%;"></span> 光纤中点</div>
+            <div class="item"><span class="swatch" style="background:#fff;border-radius:50%;"></span> 导嘴A (+z)</div>
+            <div class="item"><span class="swatch" style="background:#ff8800;border-radius:50%;"></span> 导嘴B (−z)</div>
+        </div>
+        <div class="info-tip">🖱 拖拽旋转 | 滚轮缩放 | 右键平移 | 空格播放</div>
+        <div class="panel">
+            <button class="btn primary" id="btnPlay">▶ 播放</button>
+            <button class="btn" id="btnStep">⏭ 单步</button>
+            <button class="btn" id="btnReset">↺ 重置</button>
+            <button class="btn" id="btnLoop">🔁 循环</button>
+            <button class="btn" id="btnSpeed">1.0×</button>
+        </div>
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        const container = document.getElementById('canvasContainer');
+        const btnPlay = document.getElementById('btnPlay');
+        const btnStep = document.getElementById('btnStep');
+        const btnReset = document.getElementById('btnReset');
+        const btnLoop = document.getElementById('btnLoop');
+        const btnSpeed = document.getElementById('btnSpeed');
+        const phaseLabel = document.getElementById('phaseLabel');
+        const statusLabel = document.getElementById('statusLabel');
+
+        // 场景
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color('#1a1a1e');
+        scene.fog = new THREE.Fog('#1a1a1e', 10, 35);
+        const camera = new THREE.PerspectiveCamera(48, container.clientWidth / container.clientHeight, 0.5, 40);
+        camera.position.set(6, 5, 10);
+        camera.lookAt(0, 0, 0);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.3;
+        container.appendChild(renderer.domElement);
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.target.set(0, 0, 0);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.08;
+        controls.minDistance = 3;
+        controls.maxDistance = 22;
+        controls.update();
+
+        // 光照
+        scene.add(new THREE.AmbientLight('#8899cc', 2.5));
+        const keyLight = new THREE.DirectionalLight('#ffffff', 6);
+        keyLight.position.set(10, 14, 8);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.set(2048, 2048);
+        keyLight.shadow.camera.near = 0.5;
+        keyLight.shadow.camera.far = 45;
+        keyLight.shadow.camera.left = -14;
+        keyLight.shadow.camera.right = 14;
+        keyLight.shadow.camera.top = 14;
+        keyLight.shadow.camera.bottom = -14;
+        scene.add(keyLight);
+        scene.add(new THREE.DirectionalLight('#ffccaa', 2.5).position.set(-4, -1, 5));
+        scene.add(new THREE.DirectionalLight('#aaccff', 3).position.set(0, 2, -5));
+
+        const grid = new THREE.PolarGridHelper(10, 40, 20, 80, 0x333344, 0x222233);
+        grid.position.z = -3;
+        scene.add(grid);
+
+        // 参数
+        const R_RING = 4.0;
+        const W_HALF = 1.5;
+        const R_LAYERS = [0.25, 0.9, 1.55, 2.2];
+        const LAYER_COLORS = [0x4A90D9, 0x5CB85C, 0xF0AD4E, 0xD9534F];
+        const TURNS = 5;
+
+        // 骨架
+        const bobbin = new THREE.Group();
+        scene.add(bobbin);
+
+        function torus(radius, tube, color, metal = 0.7, rough = 0.35, emis = 0.15) {
+            const m = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 24, 120),
+                new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: metal, emissive: color,
+                    emissiveIntensity: emis }));
+            m.castShadow = m.receiveShadow = true;
+            return m;
+        }
+        bobbin.add(torus(R_RING + R_LAYERS[0], 0.12, 0x8899aa, 0.8, 0.3, 0.2));
+        bobbin.add(torus(R_RING + R_LAYERS[3], 0.14, 0x8899aa, 0.8, 0.3, 0.2));
+        bobbin.add(torus(R_RING + (R_LAYERS[0] + R_LAYERS[3]) / 2, 0.06, 0x667788, 0.5, 0.5, 0.1));
+
+        function disc(z) {
+            const shape = new THREE.Shape();
+            shape.absarc(0, 0, R_RING + R_LAYERS[3] + 0.05, 0, Math.PI * 2, false);
+            const hole = new THREE.Path();
+            hole.absarc(0, 0, R_RING + R_LAYERS[0] - 0.05, 0, Math.PI * 2, true);
+            shape.holes.push(hole);
+            const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.08, bevelEnabled: true, bevelThickness: 0.04,
+                bevelSize: 0.04, bevelSegments: 3 });
+            const mat = new THREE.MeshStandardMaterial({
+                color: 0x8899aa,
+                roughness: 0.4,
+                metalness: 0.3,
+                emissive: 0x111122,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0.25
+            });
+            const m = new THREE.Mesh(geo, mat);
+            m.position.z = z - 0.04;
+            m.castShadow = false;
+            m.receiveShadow = false;
+            return m;
+        }
+        bobbin.add(disc(W_HALF));
+        bobbin.add(disc(-W_HALF));
+
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2;
+            const r = R_RING + (R_LAYERS[0] + R_LAYERS[3]) / 2;
+            const p = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, W_HALF * 2, 8),
+                new THREE.MeshStandardMaterial({ color: 0x667788, roughness: 0.4, metalness: 0.7, emissive: 0x111122,
+                    emissiveIntensity: 0.2 }));
+            p.position.set(r * Math.cos(a), r * Math.sin(a), 0);
+            p.castShadow = p.receiveShadow = true;
+            bobbin.add(p);
+        }
+        const axle = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, W_HALF * 2 + 0.6, 32),
+            new THREE.MeshStandardMaterial({ color: 0x778899, roughness: 0.3, metalness: 0.8, emissive: 0x111122,
+                emissiveIntensity: 0.3 }));
+        axle.castShadow = true;
+        bobbin.add(axle);
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2;
+            const len = R_RING + R_LAYERS[0] - 0.5;
+            const s = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, len, 8),
+                new THREE.MeshStandardMaterial({ color: 0x667788, roughness: 0.4, metalness: 0.7, emissive: 0x111122,
+                    emissiveIntensity: 0.2 }));
+            s.position.set(Math.cos(a) * len / 2, Math.sin(a) * len / 2, 0);
+            s.rotation.z = Math.PI / 2;
+            s.rotation.y = -a;
+            s.castShadow = true;
+            bobbin.add(s);
+        }
+        const z0 = new THREE.Mesh(new THREE.TorusGeometry(R_RING + (R_LAYERS[0] + R_LAYERS[3]) / 2, 0.05, 16, 120),
+            new THREE.MeshStandardMaterial({
+                color: 0xe74c3c,
+                roughness: 0.2,
+                metalness: 0.1,
+                emissive: 0x440000,
+                emissiveIntensity: 0.8,
+                transparent: true,
+                opacity: 0.5
+            }));
+        z0.position.z = 0;
+        bobbin.add(z0);
+
+        // 中点
+        const midGroup = new THREE.Group();
+        const midSphere = new THREE.Mesh(new THREE.SphereGeometry(0.28, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0xf1c40f, roughness: 0.15, metalness: 0.05, emissive: 0x554400,
+                emissiveIntensity: 2.0 }));
+        midGroup.add(midSphere);
+        const midGlow = new THREE.Mesh(new THREE.SphereGeometry(0.45, 32, 32),
+            new THREE.MeshBasicMaterial({ color: 0xf1c40f, transparent: true, opacity: 0.35, depthWrite: false }));
+        midGroup.add(midGlow);
+        midGroup.position.set(R_RING + R_LAYERS[0], 0, 0);
+        bobbin.add(midGroup);
+
+        // 导嘴
+        const guides = new THREE.Group();
+        scene.add(guides);
+        function createGuide(color, size = 0.35) {
+            const g = new THREE.Group();
+            g.add(new THREE.Mesh(new THREE.SphereGeometry(size, 32, 32),
+                new THREE.MeshStandardMaterial({ color, roughness: 0.15, metalness: 0.1, emissive: color,
+                    emissiveIntensity: 0.9 })));
+            const glow = new THREE.Mesh(new THREE.SphereGeometry(size * 1.6, 32, 32),
+                new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, depthWrite: false }));
+            g.add(glow);
+            const ring = new THREE.Mesh(new THREE.TorusGeometry(size * 1.3, 0.08, 16, 24),
+                new THREE.MeshStandardMaterial({ color, roughness: 0.2, metalness: 0.2, emissive: color,
+                    emissiveIntensity: 0.6 }));
+            g.add(ring);
+            g.userData = { glow, ring };
+            return g;
+        }
+        const guideA = createGuide(0xffffff, 0.35);
+        const guideB = createGuide(0xff8800, 0.35);
+        guides.add(guideA);
+        guides.add(guideB);
+        function setGuide(g, rOff, z) { g.position.set(R_RING + rOff, 0, z); }
+        setGuide(guideA, R_LAYERS[0], 0);
+        setGuide(guideB, R_LAYERS[0], 0);
+
+        function label(text, color) {
+            const c = document.createElement('canvas');
+            c.width = 256;
+            c.height = 128;
+            const ctx = c.getContext('2d');
+            ctx.fillStyle = color;
+            ctx.font = 'bold 36px "PingFang SC","Microsoft YaHei",sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(text, 128, 64);
+            const t = new THREE.CanvasTexture(c);
+            t.minFilter = THREE.LinearFilter;
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false,
+                depthWrite: false }));
+            s.scale.set(2.8, 1.4, 1);
+            return s;
+        }
+        guideA.add(label('导嘴A (+z)', '#ffffff')).position.set(0, 0.9, 0);
+        guideB.add(label('导嘴B (−z)', '#ff8800')).position.set(0, 0.9, 0);
+
+        // 光纤
+        const fiberDone = new THREE.Group();
+        bobbin.add(fiberDone);
+        let lineA = null,
+            lineB = null;
+        function createLine(points, color) {
+            if (points.length < 2) return null;
+            const curve = new THREE.CatmullRomCurve3(points, false, 'catmullrom', 0.5);
+            const geo = new THREE.TubeGeometry(curve, Math.max(points.length, 30), 0.07, 10, false);
+            const mat = new THREE.MeshStandardMaterial({ color, roughness: 0.3, metalness: 0.05, emissive: color,
+                emissiveIntensity: 0.35 });
+            const m = new THREE.Mesh(geo, mat);
+            m.castShadow = m.receiveShadow = true;
+            return m;
+        }
+        function clearActive() {
+            if (lineA) { scene.remove(lineA);
+                lineA = null; }
+            if (lineB) { scene.remove(lineB);
+                lineB = null; }
+        }
+        function clearAll() {
+            while (fiberDone.children.length) fiberDone.remove(fiberDone.children[0]);
+            clearActive();
+        }
+
+        // 动画状态
+        const phases = [
+            { type: 'layer', layer: 0, dir: 'out', r: R_LAYERS[0], label: 'L1 铺设' },
+            { type: 'trans', rA: R_LAYERS[0], rB: R_LAYERS[1], zA: W_HALF, zB: -W_HALF, label: '换层 L1→L2' },
+            { type: 'layer', layer: 1, dir: 'in', r: R_LAYERS[1], label: 'L2 铺设' },
+            { type: 'trans', rA: R_LAYERS[1], rB: R_LAYERS[2], zA: 0, zB: 0, label: '换层 L2→L3' },
+            { type: 'layer', layer: 2, dir: 'out', r: R_LAYERS[2], label: 'L3 铺设' },
+            { type: 'trans', rA: R_LAYERS[2], rB: R_LAYERS[3], zA: W_HALF, zB: -W_HALF, label: '换层 L3→L4' },
+            { type: 'layer', layer: 3, dir: 'in', r: R_LAYERS[3], label: 'L4 铺设' },
+        ];
+        let phaseIdx = 0,
+            progress = 0,
+            curLayer = 0,
+            playing = false,
+            loop = false,
+            speed = 1.0,
+            angle = 0;
+
+        function reset() {
+            phaseIdx = 0;
+            progress = 0;
+            curLayer = 0;
+            angle = 0;
+            bobbin.rotation.z = 0;
+            clearAll();
+            setGuide(guideA, R_LAYERS[0], 0);
+            setGuide(guideB, R_LAYERS[0], 0);
+            updateUI();
+        }
+
+        function advance(dt) {
+            if (phaseIdx >= phases.length) { if (loop) reset(); return; }
+            const p = phases[phaseIdx];
+            const dur = p.type === 'layer' ? 2.0 / speed : 0.65 / speed;
+            progress += dt / dur;
+            if (progress >= 1) {
+                finishPhase();
+                progress = 0;
+                phaseIdx++;
+                if (phaseIdx >= phases.length) { updateUI(); return; }
+                const leftover = (progress - 1) * dur;
+                if (leftover > 0.001) advance(leftover);
+            } else {
+                animatePhase();
+            }
+            updateUI();
+        }
+
+        function createHalfSpiral(rOffset, startZ, endZ, turns, startAngle) {
+            const pts = [];
+            const steps = turns * 60;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                const th = startAngle + t * turns * Math.PI * 2;
+                const z = startZ + t * (endZ - startZ);
+                const r = R_RING + rOffset;
+                pts.push(new THREE.Vector3(r * Math.cos(th), r * Math.sin(th), z));
+            }
+            return pts;
+        }
+
+        function finishPhase() {
+            const p = phases[phaseIdx];
+            if (p.type === 'layer') {
+                const color = LAYER_COLORS[p.layer];
+                const startZ = p.dir === 'out' ? 0 : W_HALF;
+                const endZ = p.dir === 'out' ? W_HALF : 0;
+                const ptsPos = createHalfSpiral(p.r, startZ, endZ, TURNS, angle);
+                fiberDone.add(createLine(ptsPos, color));
+                const ptsNeg = createHalfSpiral(p.r, -startZ, -endZ, TURNS, angle);
+                fiberDone.add(createLine(ptsNeg, color));
+                angle += TURNS * Math.PI * 2;
+                bobbin.rotation.z = angle;
+                clearActive();
+                setGuide(guideA, p.r, endZ);
+                setGuide(guideB, p.r, -endZ);
+            } else {
+                clearActive();
+                setGuide(guideA, p.rB, p.zA);
+                setGuide(guideB, p.rB, p.zB);
+            }
+        }
+
+        function animatePhase() {
+            const p = phases[phaseIdx];
+            if (p.type === 'layer') {
+                curLayer = p.layer;
+                const t = easeInOutCubic(progress);
+                const startZ = p.dir === 'out' ? 0 : W_HALF;
+                const endZ = p.dir === 'out' ? W_HALF : 0;
+                const zA = startZ + t * (endZ - startZ);
+                const zB = -zA;
+                setGuide(guideA, p.r, zA);
+                setGuide(guideB, p.r, zB);
+                const curTheta = angle + t * TURNS * Math.PI * 2;
+                bobbin.rotation.z = angle + progress * TURNS * Math.PI * 2;
+                const rW = R_RING + p.r;
+                const attachA = new THREE.Vector3(rW * Math.cos(curTheta), rW * Math.sin(curTheta), zA);
+                const attachB = new THREE.Vector3(rW * Math.cos(curTheta), rW * Math.sin(curTheta), zB);
+                const guidePtA = new THREE.Vector3(R_RING + p.r, 0, zA);
+                const guidePtB = new THREE.Vector3(R_RING + p.r, 0, zB);
+                const color = LAYER_COLORS[p.layer];
+                clearActive();
+                lineA = createLine([attachA, guidePtA], color);
+                lineB = createLine([attachB, guidePtB], color);
+                if (lineA) scene.add(lineA);
+                if (lineB) scene.add(lineB);
+            } else {
+                clearActive();
+                const t = easeInOutCubic(progress);
+                const rNow = p.rA + t * (p.rB - p.rA);
+                setGuide(guideA, rNow, p.zA);
+                setGuide(guideB, rNow, p.zB);
+            }
+        }
+
+        function easeInOutCubic(t) { return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2; }
+
+        function updateUI() {
+            if (phaseIdx >= phases.length && !loop) {
+                phaseLabel.textContent = '✅ 完成';
+                statusLabel.textContent = '四极单元完成！±z半区四色光纤对称分布';
+            } else {
+                const p = phases[Math.min(phaseIdx, phases.length - 1)];
+                phaseLabel.textContent = (playing ? '🔄 ' : '⏸ ') + p.label;
+                statusLabel.textContent = '骨架旋转 | 导嘴A(+z) 导嘴B(−z) 同步铺设双线';
+            }
+            btnPlay.textContent = playing ? '⏸ 暂停' : '▶ 播放';
+            btnLoop.className = loop ? 'btn active-loop' : 'btn';
+            btnLoop.textContent = loop ? '🔁 循环中' : '🔁 循环';
+            btnSpeed.textContent = speed.toFixed(1) + '×';
+        }
+
+        btnPlay.onclick = () => {
+            if (phaseIdx >= phases.length && !loop) reset();
+            playing = !playing;
+            updateUI();
+        };
+        btnStep.onclick = () => { const w = playing;
+            playing = false;
+            advance(0.22 / speed);
+            updateUI(); if (w) playing = true; };
+        btnReset.onclick = () => { playing = false;
+            reset(); };
+        btnLoop.onclick = () => { loop = !loop;
+            updateUI(); if (loop && !playing && phaseIdx >= phases.length) { reset();
+                playing = true; } if (loop && !playing && phaseIdx < phases.length) playing = true; };
+        btnSpeed.onclick = () => {
+            const sp = [0.3, 0.5, 0.7, 1.0, 1.5, 2.0];
+            speed = sp[(sp.indexOf(speed) + 1) % sp.length];
+            updateUI();
+        };
+        document.onkeydown = e => {
+            if (e.target.tagName === 'INPUT') return;
+            if (e.key === ' ') { e.preventDefault();
+                btnPlay.onclick(); }
+            if (e.key === 'ArrowRight') { e.preventDefault();
+                btnStep.onclick(); }
+            if (e.key === 'r') { e.preventDefault();
+                btnReset.onclick(); }
+            if (e.key === 'l') { e.preventDefault();
+                btnLoop.onclick(); }
+            if (e.key === 's') { e.preventDefault();
+                btnSpeed.onclick(); }
+        };
+        window.onresize = () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        };
+
+        // 粒子背景
+        const ptsGeo = new THREE.BufferGeometry();
+        const pos = new Float32Array(1500);
+        for (let i = 0; i < 1500; i++) pos[i] = (Math.random() - 0.5) * 22;
+        ptsGeo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+        const pts = new THREE.Points(ptsGeo, new THREE.PointsMaterial({ size: 0.025, color: 0x8899cc, transparent: true,
+            opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
+        scene.add(pts);
+
+        reset();
+        updateUI();
+        let last = performance.now();
+        (function anim(now) {
+            requestAnimationFrame(anim);
+            const dt = Math.min((now - last) / 1000, 0.1);
+            last = now;
+            if (playing) advance(dt);
+            const pulse = 1 + Math.sin(now * 0.004) * 0.2;
+            [guideA, guideB].forEach(g => {
+                if (g.userData.glow) g.userData.glow.scale.setScalar(pulse);
+                if (g.userData.ring) g.userData.ring.rotation.x += 0.02;
+            });
+            midGlow.scale.setScalar(1 + Math.sin(now * 0.005) * 0.3);
+            pts.rotation.z += 0.0003;
+            controls.update();
+            renderer.render(scene, camera);
+        })();
+
+        setTimeout(() => { if (!playing) { playing = true;
+                updateUI(); } }, 600);
+    </script>
+</body>
+</html>
