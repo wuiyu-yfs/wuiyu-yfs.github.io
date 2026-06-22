@@ -4,3 +4,4 @@
 
 - [锁相放大过程可视化 - 光纤陀螺信号解调](https://wuiyu-yfs.github.io/%E9%94%81%E7%9B%B8%E6%94%BE%E5%A4%A7%E8%BF%87%E7%A8%8B%E5%8F%AF%E8%A7%86%E5%8C%96%20-%20%E5%85%89%E7%BA%A4%E9%99%80%E8%9E%BA%E4%BF%A1%E5%8F%B7%E8%A7%A3%E8%B0%83.html)
 
+- [四极对称绕法-3D动态演示](https://wuiyu-yfs.github.io/%E5%9B%9B%E6%9E%81%E5%AF%B9%E7%A7%B0%E7%BB%95%E6%B3%95-3D%E5%8A%A8%E6%80%81%E6%BC%94%E7%A4%BA.html)
